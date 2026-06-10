@@ -46,7 +46,8 @@ npm run dev     # 开发模式（CRXJS 热更新）
 - Manifest V3 + `chrome.cookies` / `chrome.storage` API
 - React 18 + Vite 5 + [@crxjs/vite-plugin](https://crxjs.dev/)
 - UI：弹窗与管理页统一使用 Tailwind CSS v4 + shadcn 风格组件（Radix Dialog/DropdownMenu、cva、lucide-react），组件在 `src/components/ui/`，主题在 `src/styles/globals.css`
-- 弹窗交互：自动选中与当前页面最匹配的作用域（多个匹配时 chips 切换）；对比实时 Cookie 自动标记「当前」账号；每行主操作仅「切换」，更新/改名/删除收在 ⋯ 菜单；导入导出在管理页
+- 弹窗布局：左侧可折叠账号栏（收起显示头像、展开显示头像+备注+Cookie 数，支持搜索，点击即快速切换，折叠状态记忆），右侧为站点上下文 + 当前登录账号卡 + 保存表单 + Cookie 设置
+- 弹窗交互：自动选中与当前页面最匹配的作用域（多个匹配时 chips 切换）；对比实时 Cookie 自动标记「当前」账号；账号管理（更新/改名/删除）收在侧栏行内 ⋯ 菜单；导入导出在管理页
 
 ## 已知限制
 

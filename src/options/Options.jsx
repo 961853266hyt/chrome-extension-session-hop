@@ -307,7 +307,6 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onRenameAccount
                   <TableRow>
                     <TableHead>备注名</TableHead>
                     <TableHead>Cookie 数</TableHead>
-                    <TableHead>更新时间</TableHead>
                     <TableHead className="text-right">操作</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -316,9 +315,6 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onRenameAccount
                     <TableRow key={acc.id}>
                       <TableCell className="font-medium">{acc.name}</TableCell>
                       <TableCell>{acc.cookies.length}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(acc.updatedAt).toLocaleString()}
-                      </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1.5">
                           <Button variant="outline" size="sm" disabled={busy}
