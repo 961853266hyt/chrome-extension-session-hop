@@ -1,6 +1,7 @@
-// 每个主域名可配置「要管理的 Cookie 名字」。
-// 存储结构：chrome.storage.local 中 domainConfigs = { [rootDomain]: { cookieNames: string[] } }
-// cookieNames 为空 / 无配置时，回退为「管理全部 Cookie」。
+// 每个作用域（域名通配模式）可配置「要管理的 Cookie 名字」。
+// 存储结构：chrome.storage.local 中 domainConfigs = { [pattern]: { cookieNames: string[] } }
+// cookieNames 为空数组时表示「管理全部 Cookie」，但记录本身保留——
+// 这样在管理页新建的作用域即使还没有账号、没选 Cookie 也能存在。
 
 const KEY = 'domainConfigs'
 
@@ -14,15 +15,11 @@ export async function getDomainConfig(domain) {
   return all[domain] ?? null
 }
 
-/** 设置某域名要管理的 Cookie 名字；传空数组表示清除配置（回退为全部） */
+/** 设置某作用域要管理的 Cookie 名字；空数组也会保留记录（含义为管理全部） */
 export async function setCookieNames(domain, names) {
   const all = await getAllConfigs()
   const cleaned = [...new Set((names ?? []).map((n) => n.trim()).filter(Boolean))]
-  if (cleaned.length === 0) {
-    delete all[domain]
-  } else {
-    all[domain] = { cookieNames: cleaned }
-  }
+  all[domain] = { cookieNames: cleaned }
   await chrome.storage.local.set({ [KEY]: all })
   return cleaned
 }

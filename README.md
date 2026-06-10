@@ -13,7 +13,7 @@
 - **保存账号**：把当前站点（按主域名 eTLD+1，含所有子域名）受管理的 Cookie（含 HttpOnly）存为一个命名账号
 - **一键切换**：只清除受管理的 Cookie → 写回目标账号的 Cookie → 自动刷新页面（不影响域名下其它 Cookie）
 - **更新 / 改名 / 删除**：账号的日常管理
-- **管理页（独立标签页）**：点弹窗右上角 🗂 打开，集中查看与管理「域名通配 → Cookie 组 → Profile」的对应关系：每个作用域一张卡片，可改通配模式、增删 Cookie 组里的名字、改名 / 删除 / 应用每个 profile，按作用域或整体导入导出
+- **管理页（独立标签页）**：点弹窗右上角 🗂 打开，集中查看与管理「域名通配 → Cookie 组 → Profile」的对应关系：每个作用域一张卡片，全部表单化操作——可直接新增作用域（通配 + Cookie 组）、就地编辑通配模式、增删 Cookie 名、对话框改名 / 删除 / 应用每个 profile，按作用域或整体导入导出
 - **导入 / 导出**：账号数据可导出为 JSON 文件，换机器或备份时再导入
 
 ## 为什么不直接保存全部 Cookie
@@ -45,6 +45,7 @@ npm run dev     # 开发模式（CRXJS 热更新）
 
 - Manifest V3 + `chrome.cookies` / `chrome.storage` API
 - React 18 + Vite 5 + [@crxjs/vite-plugin](https://crxjs.dev/)
+- 管理页 UI：Tailwind CSS v4 + shadcn 风格组件（Radix Dialog、cva、lucide-react），组件在 `src/components/ui/`
 
 ## 已知限制
 

@@ -15,6 +15,17 @@ export async function listScopes() {
   }))
 }
 
+/** 新建一个空作用域（仅域名通配 + Cookie 组，账号后续再存）。已存在时报错 */
+export async function createScope(pattern, cookieNames = []) {
+  const d = await chrome.storage.local.get([A, C])
+  if (d[A]?.[pattern] || d[C]?.[pattern]) {
+    throw new Error(`作用域「${pattern}」已存在`)
+  }
+  const configs = d[C] ?? {}
+  configs[pattern] = { cookieNames }
+  await chrome.storage.local.set({ [C]: configs })
+}
+
 /** 重命名作用域（域名通配模式）。目标已存在时合并 profile，配置保留目标原有的 */
 export async function renameScope(oldKey, newKeyRaw) {
   const newKey = newKeyRaw.trim()
