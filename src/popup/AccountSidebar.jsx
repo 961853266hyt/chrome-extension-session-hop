@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  Search, ChevronLeft, ChevronsRight, MoreVertical, ArrowLeftRight, RefreshCw, Pencil, Trash2,
+  Search, ChevronLeft, ChevronsRight, MoreVertical, ArrowLeftRight, RefreshCw, Pencil, LogOut, Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ function initials(name) {
 }
 
 export default function AccountSidebar({
-  accounts, activeId, collapsed, busy, onToggle, onSwitch, onUpdate, onRename, onDelete,
+  accounts, activeId, collapsed, busy, onToggle, onSwitch, onUpdate, onRename, onLogout, onDelete,
 }) {
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
@@ -145,10 +145,13 @@ export default function AccountSidebar({
                         <ArrowLeftRight /> 切换
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => onUpdate(acc)}>
-                        <RefreshCw /> 更新为当前登录态
+                        <RefreshCw /> 从浏览器同步 Cookie
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => onRename(acc)}>
                         <Pencil /> 重命名
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={onLogout}>
+                        <LogOut /> 退出登录
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem

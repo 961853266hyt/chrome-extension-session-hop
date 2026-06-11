@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Settings, Globe } from 'lucide-react'
 import { getActiveTab } from '../lib/domain'
-import { getDomainCookies, applyAccount, detectActiveAccount } from '../lib/cookies'
+import { getDomainCookies, removeCookies, applyAccount, detectActiveAccount } from '../lib/cookies'
 import { getDomainConfig, getAllConfigs } from '../lib/domain-config'
 import { bestMatch, matchHost } from '../lib/pattern'
 import {
@@ -132,7 +132,26 @@ export default function App() {
       }
       await updateAccountCookies(scope, acc.id, cookies)
       await loadScope(scope)
-      notify('ok', `已用当前登录态覆盖「${acc.name}」`)
+      notify('ok', `已把浏览器当前 Cookie 同步到「${acc.name}」`)
+    })
+
+  const handleLogout = () =>
+    run(async () => {
+      const cookies = await getDomainCookies(scope, patterns)
+      if (cookies.length === 0) {
+        notify('error', '当前没有受管理的 Cookie，可能已是未登录状态')
+        return
+      }
+      // 当前登录态没对应任何已存账号时，清掉就找不回来了，先确认
+      if (
+        activeId === null &&
+        !confirm('当前登录态尚未保存为账号，退出后将无法找回。确定退出登录？')
+      )
+        return
+      await removeCookies(cookies)
+      await loadScope(scope)
+      if (tab?.id) await chrome.tabs.reload(tab.id)
+      notify('ok', `已退出登录（清除 ${cookies.length} 条 Cookie）`)
     })
 
   const handleDelete = (acc) => {
@@ -174,6 +193,7 @@ export default function App() {
         onSwitch={handleSwitch}
         onUpdate={handleUpdate}
         onRename={setRenameTarget}
+        onLogout={handleLogout}
         onDelete={handleDelete}
       />
 
