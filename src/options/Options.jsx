@@ -102,10 +102,10 @@ export default function Options() {
               download(await exportAccounts(null), `accounts-all-${Date.now()}.json`)
               notify('ok', '已导出全部')
             })}>
-            <Download /> 导出全部
+            <Upload /> 导出全部
           </Button>
           <Button variant="outline" disabled={busy} onClick={() => fileInputRef.current?.click()}>
-            <Upload /> 导入 JSON
+            <Download /> 导入 JSON
           </Button>
           <input ref={fileInputRef} type="file" accept="application/json,.json" hidden onChange={onImportFile} />
           <Button disabled={busy} onClick={() => setNewOpen(true)}>
