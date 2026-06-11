@@ -302,7 +302,7 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount }
           {editingLabel ? (
             <Input
               autoFocus
-              className="h-8 w-40 rounded-lg text-[13px]"
+              className="h-8 w-40 text-[13px]"
               value={labelDraft}
               maxLength={20}
               placeholder="别名"
@@ -315,15 +315,15 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount }
             <button
               type="button"
               disabled={busy}
-              title="点击编辑别名"
+              title={scope.label ? '点击编辑别名' : '点击添加别名'}
               onClick={() => { setLabelDraft(scope.label); setEditingLabel(true) }}
               className={
                 scope.label
-                  ? 'inline-flex shrink-0 items-center rounded-lg bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/70'
-                  : 'inline-flex shrink-0 items-center rounded-lg bg-green-100 px-2.5 py-1 text-xs text-green-700 transition-colors hover:bg-green-200'
+                  ? 'inline-flex shrink-0 items-center rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90'
+                  : 'inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90'
               }
             >
-              {scope.label || '+ 别名'}
+              {scope.label ? scope.label : (<><Plus className="size-3" /> 别名</>)}
             </button>
           )}
         </div>

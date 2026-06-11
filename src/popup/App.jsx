@@ -289,14 +289,14 @@ export default function App() {
             >
               <Input
                 className="h-9 flex-1"
-                placeholder="备注名，如：工作号"
+                placeholder="输入账号备注"
                 value={newName}
                 maxLength={30}
                 onChange={(e) => setNewName(e.target.value)}
                 disabled={busy}
               />
               <Button type="submit" disabled={busy || !newName.trim()}>
-                <Plus /> 保存当前
+                <Plus /> 保存备注
               </Button>
             </form>
             <div className="mt-2 flex items-center justify-between">
