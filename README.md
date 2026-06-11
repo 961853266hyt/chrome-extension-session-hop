@@ -1,61 +1,68 @@
-# 账号切换助手（Chrome 插件）
+# SessionHop ![License MIT](https://img.shields.io/badge/license-MIT-green) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-4285F4)
 
-同一域名下多账号一键切换，基于 Cookie 的保存与恢复实现。
+**One-Click Account Switcher** — the power to manage multiple accounts across all sites, in one click. A Chrome extension that hops between logins by saving and restoring cookies, built for people who juggle work/personal accounts or test/prod environments without constant logging in and out.
 
-## 功能
 
-- **作用域用一个通配符决定（区分测试/正式）**：每个作用域就是一个域名模式，既是账号分组，也决定抓哪些 Cookie：
-  - `example.com` —— 整站，含所有子域名（无 `*` 时也覆盖子域名）
-  - `www-d.example.com` / `www.example.com` —— 仅该主机，测试与正式各自独立、互不干扰
-  - `*.example.com` —— 所有子域名；`*-d.example.com` —— 所有测试子域名
-  - 弹窗顶部可直接编辑模式，并提供主域名 / 当前主机 / `*.主域名` 三个快捷建议；打开时自动选中与当前页面最匹配（最具体）的已存模式，没有则默认主域名
-- **按 Cookie 名管理（核心）**：每个范围可指定「要管理的 Cookie 名字」，只保存 / 切换登录态相关的那几个，不碰分析、追踪类 Cookie。点 ⚙ 进入设置，列出当前范围所有 Cookie 供勾选，并按启发式（HttpOnly / 名字含 sess、auth、token、sid 等）智能预选；支持 `前缀*` 通配；留空则回退为「全部」
-- **保存账号**：把当前站点（按主域名 eTLD+1，含所有子域名）受管理的 Cookie（含 HttpOnly）存为一个命名账号
-- **一键切换**：只清除受管理的 Cookie → 写回目标账号的 Cookie → 自动刷新页面（不影响域名下其它 Cookie）
-- **更新 / 改名 / 删除**：账号的日常管理
-- **管理页（独立标签页）**：点弹窗右上角 🗂 打开，集中查看与管理「域名通配 → Cookie 组 → Profile」的对应关系：每个作用域一张卡片，全部表单化操作——可直接新增作用域（通配 + Cookie 组）、就地编辑通配模式、增删 Cookie 名、对话框改名 / 删除 / 应用每个 profile，按作用域或整体导入导出
-- **导入 / 导出**：账号数据可导出为 JSON 文件，换机器或备份时再导入
 
-## 为什么不直接保存全部 Cookie
+## Features
 
-全量保存会把分析、A/B 实验、CSRF 临时态、追踪类 Cookie 一起带走，切换时互相污染，反而容易把登录态切坏。主流账号管理器（SessionBox 等）的共识是只管理登录态相关的少量 Cookie，因此本插件把「要管理的 Cookie 名字」做成每域名可配置。
+- **Cookie-name targeting** — pick exactly which cookies to manage per site (usually just the login ones), so analytics and tracking cookies don't pollute switches. Includes a smart suggestion that pre-selects likely auth cookies (HttpOnly, or names like `sess`, `auth`, `token`, `sid`).
+- **Wildcard scopes** — one domain pattern decides how accounts are grouped and which cookies are captured: `example.com` (whole site), `www-d.example.com` (single host, for test vs. prod), `*.example.com`, `*-d.example.com`.
+- **One-click switch** — clears only the managed cookies, restores the target account's, and reloads the tab. Untouched cookies stay put.
+- **Active-account detection** — compares live cookies and highlights which saved account you're currently logged in as.
+- **Collapsible account rail** — quick-switch sidebar with search; avatars when collapsed, names when expanded.
+- **Management page** — a full tab to add scopes, edit cookie groups, rename/delete profiles, and import/export as JSON.
+- **Local only** — everything lives in `chrome.storage.local`; nothing is ever sent to a server.
 
-## 开发与构建
+## Installation
+
+### From source
 
 ```bash
 npm install
-npm run build   # 产物在 dist/
-npm run dev     # 开发模式（CRXJS 热更新）
+npm run build      # output in dist/
 ```
 
-## 安装到 Chrome
+Then load it in Chrome:
 
-1. 执行 `npm run build`
-2. 打开 `chrome://extensions`，开启右上角「开发者模式」
-3. 点「加载已解压的扩展程序」，选择本项目的 `dist/` 目录
-4. 在任意网站登录后，点插件图标 → 输入备注名 → 保存当前账号
+1. Open `chrome://extensions`
+2. Enable **Developer mode** (top-right)
+3. Click **Load unpacked** and select the `dist/` folder
 
-## 使用流程
+For development with hot reload:
 
-1. 用账号 A 登录某网站 → 打开插件 → 保存为「账号A」
-2. 退出登录，用账号 B 登录 → 保存为「账号B」
-3. 之后随时点「切换」即可在 A / B 之间一键来回
+```bash
+npm run dev
+```
 
-## 技术栈
+## Usage
 
-- Manifest V3 + `chrome.cookies` / `chrome.storage` API
+1. Log in to a site with account A, open the popup, give it a name, and save.
+2. Log out, log in as account B, and save it too.
+3. Click any account in the left rail to switch — the page reloads into that session.
+
+Use the ⚙ Cookie badge to choose which cookies count as the login state, and the management tab (🗂 / Settings) to organize scopes and profiles.
+
+## How it works
+
+The extension reads cookies with the `chrome.cookies` API (including `HttpOnly`). Each **scope** is a wildcard domain pattern that serves as both the account group key and the cookie filter. Saving an account stores the managed cookies; switching clears those same cookies and writes back the target account's set, leaving everything else alone.
+
+## Tech stack
+
+- Manifest V3 · `chrome.cookies` / `chrome.storage`
 - React 18 + Vite 5 + [@crxjs/vite-plugin](https://crxjs.dev/)
-- UI：弹窗与管理页统一使用 Tailwind CSS v4 + shadcn 风格组件（Radix Dialog/DropdownMenu、cva、lucide-react），组件在 `src/components/ui/`，主题在 `src/styles/globals.css`
-- 弹窗布局：左侧可折叠账号栏（收起显示头像、展开显示头像+备注+Cookie 数，支持搜索，点击即快速切换，折叠状态记忆），右侧为站点上下文 + 当前登录账号卡 + 保存表单 + Cookie 设置
-- 弹窗交互：自动选中与当前页面最匹配的作用域（多个匹配时 chips 切换）；对比实时 Cookie 自动标记「当前」账号；账号管理（更新/改名/删除）收在侧栏行内 ⋯ 菜单；导入导出在管理页
+- Tailwind CSS v4 + shadcn-style components (Radix, cva, lucide-react)
 
-## 已知限制
+## Limitations
 
-- 通配模式按注册域（eTLD+1）读取 Cookie 后再用模式过滤；若某站登录态设在父域 `.example.com` 上，则该 Cookie 会同时落入各子域名模式（测试/正式在浏览器层面本就共享、无法隔离），可用 ⚙ 的 Cookie 名单进一步排除
-- 登录态存在 `localStorage` 中的网站（部分 SPA）只换 Cookie 可能切不干净
-- 绑定 IP / 设备指纹的站点，导入到其他机器的 Cookie 可能被服务端拒绝
-- `__Host-` 前缀等受限 Cookie 极少数情况下可能写回失败，切换后界面会提示失败条数
+- Only handles cookies. Sites that keep their token in `localStorage` (some SPAs) may not switch cleanly.
+- Cookies bound to device/IP may be rejected by the server when imported on another machine.
+- A few restricted cookies (e.g. `__Host-` prefixed) can occasionally fail to write back; the popup reports how many failed.
 
-## 安全提醒
+## Privacy
 
-导出的 JSON 文件包含登录凭证（等同于账号密码），请妥善保管，勿发给不信任的人。
+All account data is stored locally via `chrome.storage.local` and never transmitted. Exported JSON files contain login credentials — treat them like passwords and don't share them with anyone you don't trust.
+
+## License
+
+MIT

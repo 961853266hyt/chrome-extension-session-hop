@@ -58,7 +58,7 @@ export async function exportAccounts(domain) {
   const all = await getAllAccounts()
   const accounts = domain ? { [domain]: all[domain] ?? [] } : all
   return JSON.stringify(
-    { app: 'account-manager', version: 1, exportedAt: new Date().toISOString(), accounts },
+    { app: 'sessionhop', version: 1, exportedAt: new Date().toISOString(), accounts },
     null,
     2,
   )

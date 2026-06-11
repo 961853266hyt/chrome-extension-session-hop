@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "账号切换助手",
+  "name": "SessionHop — 一键账号切换",
   "version": "1.0.0",
-  "description": "同一域名下多账号一键切换，基于 Cookie 保存与恢复",
+  "description": "The power to manage multiple accounts across all sites, in one click. 全站点多账号一键切换，基于 Cookie 保存与恢复",
   "permissions": ["cookies", "storage", "tabs"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "src/popup/index.html",
-    "default_title": "账号切换助手"
+    "default_title": "SessionHop"
   },
   "options_ui": {
     "page": "src/options/index.html",

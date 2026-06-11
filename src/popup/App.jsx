@@ -181,7 +181,7 @@ export default function App() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-b px-4 pb-3 pt-3.5">
           <div className="mb-2.5 flex items-center justify-between">
-            <h1 className="text-sm font-semibold tracking-tight">账号切换助手</h1>
+            <h1 className="text-sm font-semibold tracking-tight">SessionHop</h1>
             <Button variant="ghost" size="icon-sm" title="打开管理页" onClick={openOptions}>
               <Settings2 />
             </Button>
