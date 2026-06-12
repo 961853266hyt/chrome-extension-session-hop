@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Plus, Download, Upload, Trash2, Pencil, Check, X, Globe, Cookie, FileJson, ClipboardPaste, ClipboardCopy } from 'lucide-react'
 import { listScopes, createScope, renameScope, deleteScope, importPreset } from '../lib/scopes'
 import { setCookieNames, setLabel } from '../lib/domain-config'
-import { renameAccount, updateAccountCookies, deleteAccount, exportAccounts, importAccounts } from '../lib/storage'
+import { saveAccount, renameAccount, updateAccountCookies, deleteAccount, exportAccounts, importAccounts } from '../lib/storage'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,10 +17,34 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Toast } from '@/components/toast'
 import { EditAccountDialog } from '@/components/edit-account-dialog'
+import { AddAccountDialog } from '@/components/add-account-dialog'
 
 // 把逗号 / 空格 / 换行分隔的输入解析成 Cookie 名列表
 function parseNames(text) {
   return [...new Set(text.split(/[\s,，;]+/).map((s) => s.trim()).filter(Boolean))]
+}
+
+// 由作用域模式推出一个具体主机名（去掉通配符与前导点）
+function scopeHost(pattern) {
+  return pattern.replace(/\*+/g, '').replace(/^\.+/, '') || pattern
+}
+
+// 手动账号：把 { name, value } 合成可还原的 Cookie 对象（绑定到该主机、一年有效）。
+// __Secure-/__Host- 前缀的 Cookie 浏览器强制要求 secure，据此自动决定。
+function buildManualCookie(name, value, host) {
+  const secure = /^(__Secure-|__Host-)/.test(name)
+  return {
+    name,
+    value,
+    domain: host,
+    hostOnly: true,
+    path: '/',
+    secure,
+    httpOnly: false,
+    sameSite: 'lax',
+    session: false,
+    expirationDate: Math.floor(Date.now() / 1000) + 31536000,
+  }
 }
 
 function validatePattern(raw) {
@@ -37,6 +61,7 @@ export default function Options() {
   const [message, setMessage] = useState(null)
   const [newOpen, setNewOpen] = useState(false)
   const [editTarget, setEditTarget] = useState(null) // { pattern, account }
+  const [addTarget, setAddTarget] = useState(null) // { pattern, cookieNames }
   const fileInputRef = useRef(null)
 
   const reload = useCallback(async () => {
@@ -188,6 +213,7 @@ export default function Options() {
               notify={notify}
               download={download}
               onEditAccount={(account) => setEditTarget({ pattern: scope.pattern, account })}
+              onAddAccount={() => setAddTarget({ pattern: scope.pattern, cookieNames: scope.cookieNames })}
             />
           ))}
         </div>
@@ -225,12 +251,30 @@ export default function Options() {
         }
       />
 
+      <AddAccountDialog
+        open={!!addTarget}
+        onOpenChange={(open) => !open && setAddTarget(null)}
+        scope={addTarget?.pattern ?? ''}
+        cookieNames={addTarget?.cookieNames ?? []}
+        busy={busy}
+        onSubmit={(name, pairs) =>
+          run(async () => {
+            const host = scopeHost(addTarget.pattern)
+            const cookies = pairs.map((p) => buildManualCookie(p.name, p.value, host))
+            await saveAccount(addTarget.pattern, name, cookies)
+            await reload()
+            setAddTarget(null)
+            notify('ok', `已添加账号「${name}」`)
+          })
+        }
+      />
+
       <Toast message={message} className="bottom-6" />
     </div>
   )
 }
 
-function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount }) {
+function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, onAddAccount }) {
   const [patternDraft, setPatternDraft] = useState(scope.pattern)
   const [cookieInput, setCookieInput] = useState('')
   const [editingLabel, setEditingLabel] = useState(false)
@@ -390,12 +434,17 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount }
         </section>
 
         <section>
-          <Label className="mb-2 block text-xs text-muted-foreground">
-            Profile（{scope.accounts.length}）
-          </Label>
+          <div className="mb-2 flex items-center justify-between">
+            <Label className="text-xs text-muted-foreground">
+              Profile（{scope.accounts.length}）
+            </Label>
+            <Button variant="outline" size="sm" disabled={busy} onClick={onAddAccount}>
+              <Plus /> 添加账号
+            </Button>
+          </div>
           {scope.accounts.length === 0 ? (
             <p className="rounded-xl bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
-              该作用域下还没有账号——在匹配的网站上打开插件弹窗「保存当前账号」
+              该作用域下还没有账号——在匹配的网站上打开插件弹窗「保存当前账号」，或点右上角「添加账号」手动录入
             </p>
           ) : (
             <div className="space-y-2.5">
