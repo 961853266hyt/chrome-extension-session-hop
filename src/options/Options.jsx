@@ -3,6 +3,7 @@ import { Plus, Download, Upload, Trash2, Pencil, Check, X, Globe, Cookie, FileJs
 import { listScopes, createScope, renameScope, deleteScope, importPreset } from '../lib/scopes'
 import { setCookieNames, setLabel } from '../lib/domain-config'
 import { saveAccount, renameAccount, updateAccountCookies, deleteAccount, exportAccounts, importAccounts } from '../lib/storage'
+import { matchCookieName } from '../lib/cookies'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -45,6 +46,42 @@ function buildManualCookie(name, value, host) {
     session: false,
     expirationDate: Math.floor(Date.now() / 1000) + 31536000,
   }
+}
+
+async function readClipboardText() {
+  let text
+  try {
+    text = await navigator.clipboard.readText()
+  } catch {
+    throw new Error('无法读取剪贴板，请检查浏览器权限')
+  }
+  if (!text.trim()) throw new Error('剪贴板是空的')
+  return text
+}
+
+// 解析剪贴板里的 Cookie JSON：支持 Cookie 数组或 { name?, cookies: [...] }，并按 Cookie 组过滤
+function parseClipboardCookies(text, cookieNames) {
+  let parsed
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error('剪贴板内容不是有效的 JSON')
+  }
+  let cookies
+  let name = null
+  if (Array.isArray(parsed)) {
+    cookies = parsed
+  } else if (Array.isArray(parsed?.cookies)) {
+    cookies = parsed.cookies
+    if (typeof parsed.name === 'string' && parsed.name.trim()) name = parsed.name.trim()
+  } else {
+    throw new Error('未识别到 Cookie 数据（应为 Cookie 数组或含 cookies 字段的对象）')
+  }
+  cookies = cookies.filter(
+    (c) => c?.name && typeof c.value === 'string' && matchCookieName(c.name, cookieNames),
+  )
+  if (cookies.length === 0) throw new Error('没有可用的 Cookie（检查格式或 Cookie 组）')
+  return { cookies, name }
 }
 
 function validatePattern(raw) {
@@ -318,6 +355,41 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
       await reload()
     })
 
+  // 从剪贴板读取一段 Cookie JSON，直接新建一个账号
+  const addFromClipboard = () =>
+    run(async () => {
+      const { cookies, name } = parseClipboardCookies(await readClipboardText(), scope.cookieNames)
+      const accName = name ?? '剪贴板账号'
+      await saveAccount(scope.pattern, accName, cookies)
+      await reload()
+      notify('ok', `已从剪贴板添加「${accName}」（${cookies.length} 个 Cookie）`)
+    })
+
+  // 把单个账号复制到剪贴板（name + cookies）
+  const copyAccount = (acc) =>
+    run(async () => {
+      const json = JSON.stringify(
+        { app: 'account-manager', version: 1, name: acc.name, domain: scope.pattern, cookies: acc.cookies },
+        null,
+        2,
+      )
+      try {
+        await navigator.clipboard.writeText(json)
+      } catch {
+        throw new Error('无法写入剪贴板，请检查浏览器权限')
+      }
+      notify('ok', `已复制「${acc.name}」到剪贴板`)
+    })
+
+  // 用剪贴板里的 Cookie 覆盖某个账号（保留其名字）
+  const overwriteFromClipboard = (acc) =>
+    run(async () => {
+      const { cookies } = parseClipboardCookies(await readClipboardText(), scope.cookieNames)
+      await updateAccountCookies(scope.pattern, acc.id, cookies)
+      await reload()
+      notify('ok', `已用剪贴板覆盖「${acc.name}」（${cookies.length} 个 Cookie）`)
+    })
+
   return (
     <Card className="border-0 shadow-md ring-1 ring-border/60">
       <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -438,9 +510,14 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
             <Label className="text-xs text-muted-foreground">
               Profile（{scope.accounts.length}）
             </Label>
-            <Button variant="outline" size="sm" disabled={busy} onClick={onAddAccount}>
-              <Plus /> 添加账号
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={busy} onClick={addFromClipboard}>
+                <ClipboardPaste /> 从剪贴板
+              </Button>
+              <Button variant="outline" size="sm" disabled={busy} onClick={onAddAccount}>
+                <Plus /> 添加账号
+              </Button>
+            </div>
           </div>
           {scope.accounts.length === 0 ? (
             <p className="rounded-xl bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
@@ -466,6 +543,14 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
                     <p className="truncate font-medium">{acc.name}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
+                    <Button variant="ghost" size="icon-sm" disabled={busy} title="复制到剪贴板"
+                      onClick={(e) => { e.stopPropagation(); copyAccount(acc) }}>
+                      <ClipboardCopy />
+                    </Button>
+                    <Button variant="ghost" size="icon-sm" disabled={busy} title="从剪贴板覆盖"
+                      onClick={(e) => { e.stopPropagation(); overwriteFromClipboard(acc) }}>
+                      <ClipboardPaste />
+                    </Button>
                     <Button variant="ghost" size="icon-sm" disabled={busy} title="编辑"
                       onClick={(e) => { e.stopPropagation(); onEditAccount(acc) }}>
                       <Pencil />
