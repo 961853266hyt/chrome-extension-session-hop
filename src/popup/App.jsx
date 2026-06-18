@@ -105,7 +105,7 @@ export default function App() {
       }
       const cookies = await getDomainCookies(scope, patterns)
       if (cookies.length === 0) {
-        notify('error', patterns?.length ? '没匹配到受管理的 Cookie，请检查 Cookie 组或是否已登录' : '当前作用域下没有 Cookie，可能尚未登录')
+        notify('error', patterns?.length ? '没匹配到受管理的 Cookie，请检查 Cookie 组或是否已登录' : '请先选择要保存的 Cookie 名称')
         return
       }
       await saveAccount(scope, name, cookies)
@@ -127,7 +127,7 @@ export default function App() {
     run(async () => {
       const cookies = await getDomainCookies(scope, patterns)
       if (cookies.length === 0) {
-        notify('error', '当前没有可保存的 Cookie')
+        notify('error', patterns?.length ? '当前没有可保存的 Cookie' : '请先选择要保存的 Cookie 名称')
         return
       }
       await updateAccountCookies(scope, acc.id, cookies)
@@ -221,9 +221,9 @@ export default function App() {
                 {patterns.length} 个 Cookie
               </Badge>
             ) : (
-              <Badge variant="destructive" className="shrink-0 cursor-pointer" title="未设置 Cookie 组，将保存全部 Cookie。点击选择"
+              <Badge variant="destructive" className="shrink-0 cursor-pointer" title="未选择 Cookie 名称，不会默认保存全部 Cookie。点击选择"
                 onClick={() => setView(view === 'cookies' ? 'list' : 'cookies')}>
-                全部 Cookie
+                未选择 Cookie
               </Badge>
             )}
           </div>
@@ -259,7 +259,7 @@ export default function App() {
                 if (!matching.includes(scope)) setMatching((m) => [...m, scope].sort())
                 setView('list')
                 loadScope(scope)
-                notify('ok', names.length ? `已设置管理 ${names.length} 个 Cookie` : '已设为管理全部 Cookie')
+                notify('ok', names.length ? `已设置管理 ${names.length} 个 Cookie` : '未选择 Cookie，不会保存或清除任何 Cookie')
               }}
             />
           ) : accounts.length === 0 ? (

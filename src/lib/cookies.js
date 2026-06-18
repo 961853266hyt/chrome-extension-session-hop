@@ -8,11 +8,11 @@ function cookieUrl(cookie) {
 
 /**
  * 判断某 Cookie 名是否落在配置的「要管理」名单内。
- * - patterns 为空 / 未配置：返回 true（管理全部，向后兼容）
+ * - patterns 为空 / 未配置：返回 false，必须由用户明确选择 Cookie 名
  * - 支持 `前缀*` 通配，如 `__Secure-*`
  */
 export function matchCookieName(name, patterns) {
-  if (!patterns || patterns.length === 0) return true
+  if (!patterns || patterns.length === 0) return false
   return patterns.some((p) =>
     p.endsWith('*') ? name.startsWith(p.slice(0, -1)) : name === p,
   )

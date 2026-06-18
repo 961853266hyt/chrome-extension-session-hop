@@ -471,10 +471,10 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
             <Cookie className="size-4 text-muted-foreground" />
             <Label className="text-xs text-muted-foreground">Cookie 组</Label>
             <HelpPopover label="Cookie 名规则">
-              填写要管理的 Cookie 名，多个用 <code className="font-mono">,</code> 分隔；支持 <code className="font-mono">前缀*</code> 通配，如 <code className="font-mono">__Secure-*</code>。留空表示管理全部 Cookie。
+              填写要管理的 Cookie 名，多个用 <code className="font-mono">,</code> 分隔；支持 <code className="font-mono">前缀*</code> 通配，如 <code className="font-mono">__Secure-*</code>。留空表示不管理任何 Cookie。
             </HelpPopover>
             {scope.cookieNames.length === 0 && (
-              <Badge variant="destructive">未设置 · 管理全部 Cookie</Badge>
+              <Badge variant="destructive">未选择 Cookie</Badge>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -642,4 +642,3 @@ function NewScopeDialog({ open, onOpenChange, busy, onSubmit }) {
     </Dialog>
   )
 }
-

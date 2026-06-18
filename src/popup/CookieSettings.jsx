@@ -157,7 +157,7 @@ export default function CookieSettings({ domain, config, onSaved, onClose }) {
           </form>
 
           <Button className="w-full" onClick={save}>
-            保存设置（{total > 0 ? `${total} 项` : '全部'}）
+            保存设置（{total > 0 ? `${total} 项` : '未选择'}）
           </Button>
         </>
       )}
