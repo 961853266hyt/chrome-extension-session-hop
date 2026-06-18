@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useI18n } from '@/lib/i18n'
 import {
   Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose,
 } from '@/components/ui/dialog'
@@ -11,6 +12,7 @@ import {
  * Cookie 的 key（name）固定为 profile 原有的，不可在此增删或改名。
  */
 export function EditAccountDialog({ open, onOpenChange, account, scope, busy, onSubmit }) {
+  const { t } = useI18n()
   const [name, setName] = useState('')
   const [values, setValues] = useState([])
 
@@ -36,12 +38,12 @@ export function EditAccountDialog({ open, onOpenChange, account, scope, busy, on
       <DialogContent className="max-w-lg">
         <form onSubmit={submit} className="grid gap-4">
           <DialogHeader>
-            <DialogTitle>编辑账号</DialogTitle>
+            <DialogTitle>{t('dialog.editAccountTitle')}</DialogTitle>
             <DialogDescription className="font-mono text-xs">{scope}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-2">
-            <Label htmlFor="edit-account-name">备注名</Label>
+            <Label htmlFor="edit-account-name">{t('dialog.nameLabel')}</Label>
             <Input
               id="edit-account-name"
               value={name}
@@ -56,7 +58,7 @@ export function EditAccountDialog({ open, onOpenChange, account, scope, busy, on
             </Label>
             {account.cookies.length === 0 ? (
               <p className="rounded-xl bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
-                该账号没有保存任何 Cookie
+                {t('dialog.noSavedCookie')}
               </p>
             ) : (
               <div className="-mr-1 max-h-[50vh] space-y-3 overflow-y-auto pr-1">
@@ -83,9 +85,9 @@ export function EditAccountDialog({ open, onOpenChange, account, scope, busy, on
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">取消</Button>
+              <Button type="button" variant="outline">{t('common.cancel')}</Button>
             </DialogClose>
-            <Button type="submit" disabled={busy || !name.trim()}>保存</Button>
+            <Button type="submit" disabled={busy || !name.trim()}>{t('common.save')}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

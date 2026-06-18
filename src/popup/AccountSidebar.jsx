@@ -5,6 +5,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useI18n } from '@/lib/i18n'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
@@ -16,6 +17,7 @@ function initials(name) {
 export default function AccountSidebar({
   accounts, activeId, collapsed, busy, onToggle, onSwitch, onUpdate, onRename, onLogout, onDelete,
 }) {
+  const { t } = useI18n()
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
   const filtered = q ? accounts.filter((a) => a.name.toLowerCase().includes(q)) : accounts
@@ -34,7 +36,7 @@ export default function AccountSidebar({
             variant="ghost"
             size="icon-sm"
             className="mx-auto"
-            title="展开账号栏"
+            title={t('sidebar.expand')}
             onClick={onToggle}
           >
             <ChevronsRight />
@@ -45,12 +47,12 @@ export default function AccountSidebar({
               <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="h-7 pl-7 text-xs"
-                placeholder="搜索账号"
+                placeholder={t('sidebar.searchPlaceholder')}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <Button variant="ghost" size="icon-sm" title="收起" onClick={onToggle}>
+            <Button variant="ghost" size="icon-sm" title={t('sidebar.collapse')} onClick={onToggle}>
               <ChevronLeft />
             </Button>
           </>
@@ -62,12 +64,12 @@ export default function AccountSidebar({
         {accounts.length === 0 ? (
           !collapsed && (
             <p className="px-1 py-4 text-center text-[11px] leading-relaxed text-muted-foreground">
-              暂无账号
+              {t('sidebar.empty')}
             </p>
           )
         ) : filtered.length === 0 ? (
           !collapsed && (
-            <p className="px-1 py-4 text-center text-[11px] text-muted-foreground">无匹配结果</p>
+            <p className="px-1 py-4 text-center text-[11px] text-muted-foreground">{t('sidebar.noMatches')}</p>
           )
         ) : (
           <ul className="space-y-1">
@@ -79,7 +81,7 @@ export default function AccountSidebar({
                     <button
                       disabled={busy}
                       onClick={() => onSwitch(acc)}
-                      title={`${acc.name}（${acc.cookies.length} 条 Cookie）${active ? ' · 当前' : ''}`}
+                      title={`${acc.name} (${t('common.cookieCount', { count: acc.cookies.length })})${active ? ` · ${t('sidebar.current')}` : ''}`}
                       className="flex w-full cursor-pointer items-center justify-center rounded-md py-1.5 transition-colors hover:bg-accent disabled:opacity-50"
                     >
                       <span
@@ -107,7 +109,7 @@ export default function AccountSidebar({
                   <button
                     disabled={busy}
                     onClick={() => onSwitch(acc)}
-                    title={active ? '当前账号 · 点击重新写入' : '点击切换到该账号'}
+                    title={active ? t('sidebar.currentAccountWriteAgain') : t('sidebar.switchToAccount')}
                     className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 p-1.5 text-left disabled:opacity-50"
                   >
                     <span
@@ -124,7 +126,7 @@ export default function AccountSidebar({
                         {active && <span className="size-1.5 shrink-0 rounded-full bg-green-600" />}
                       </span>
                       <span className="block text-[10px] text-muted-foreground">
-                        {acc.cookies.length} 条 Cookie
+                        {t('common.cookieCount', { count: acc.cookies.length })}
                       </span>
                     </span>
                   </button>
@@ -135,30 +137,30 @@ export default function AccountSidebar({
                         size="icon-sm"
                         disabled={busy}
                         className="size-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-                        title="更多操作"
+                        title={t('sidebar.moreActions')}
                       >
                         <MoreVertical />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onSelect={() => onSwitch(acc)}>
-                        <ArrowLeftRight /> 切换
+                        <ArrowLeftRight /> {t('sidebar.switch')}
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => onUpdate(acc)}>
-                        <RefreshCw /> 从浏览器同步 Cookie
+                        <RefreshCw /> {t('sidebar.syncFromBrowser')}
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => onRename(acc)}>
-                        <Pencil /> 重命名
+                        <Pencil /> {t('sidebar.rename')}
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={onLogout}>
-                        <LogOut /> 退出登录
+                        <LogOut /> {t('sidebar.logout')}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
                         onSelect={() => onDelete(acc)}
                       >
-                        <Trash2 /> 删除
+                        <Trash2 /> {t('common.delete')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

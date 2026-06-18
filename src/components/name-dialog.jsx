@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useI18n } from '@/lib/i18n'
 import {
   Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose,
 } from '@/components/ui/dialog'
 
 /** 单字段命名对话框，弹窗和管理页共用 */
 export function NameDialog({ open, onOpenChange, title, description, initialName = '', busy, onSubmit }) {
+  const { t } = useI18n()
   const [name, setName] = useState(initialName)
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export function NameDialog({ open, onOpenChange, title, description, initialName
             {description && <DialogDescription>{description}</DialogDescription>}
           </DialogHeader>
           <div className="grid gap-2">
-            <Label htmlFor="name-dialog-input">备注名</Label>
+            <Label htmlFor="name-dialog-input">{t('dialog.nameLabel')}</Label>
             <Input
               id="name-dialog-input"
               value={name}
@@ -41,9 +43,9 @@ export function NameDialog({ open, onOpenChange, title, description, initialName
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">取消</Button>
+              <Button type="button" variant="outline">{t('common.cancel')}</Button>
             </DialogClose>
-            <Button type="submit" disabled={busy || !name.trim()}>保存</Button>
+            <Button type="submit" disabled={busy || !name.trim()}>{t('common.save')}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -1,3 +1,5 @@
+import { appError } from './errors'
+
 // 存储结构：chrome.storage.local 中 accounts = { [rootDomain]: Account[] }
 // Account: { id, name, domain, cookies, createdAt, updatedAt }
 
@@ -70,11 +72,11 @@ export async function importAccounts(jsonText) {
   try {
     parsed = JSON.parse(jsonText)
   } catch {
-    throw new Error('不是有效的 JSON 文件')
+    throw appError('jsonFileInvalid')
   }
   const incoming = parsed?.accounts
   if (!incoming || typeof incoming !== 'object') {
-    throw new Error('文件格式不正确，缺少 accounts 字段')
+    throw appError('accountsMissing')
   }
   const all = await getAllAccounts()
   let count = 0

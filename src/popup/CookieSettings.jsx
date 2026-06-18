@@ -5,6 +5,7 @@ import { queryDomain, cookieInScope } from '../lib/pattern'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { useI18n } from '@/lib/i18n'
 
 // 启发式：HttpOnly 或名字像登录态的，默认推荐勾选
 const AUTH_RE = /sess|auth|token|sid|login|uid|user|csrf|jwt|account|secure|remember|passport|ticket/i
@@ -13,6 +14,7 @@ function isLikelyAuth(c) {
 }
 
 export default function CookieSettings({ domain, config, onSaved, onClose }) {
+  const { t } = useI18n()
   const [cookies, setCookies] = useState([])
   const [selected, setSelected] = useState(() => new Set())
   const [extras, setExtras] = useState([]) // 配置里但当前页不存在的名字/通配
@@ -68,35 +70,35 @@ export default function CookieSettings({ domain, config, onSaved, onClose }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[13px] font-semibold">选择要管理的 Cookie</p>
+          <p className="text-[13px] font-semibold">{t('cookieSettings.title')}</p>
         </div>
-        <Button variant="ghost" size="icon-sm" title="关闭" onClick={onClose}>
+        <Button variant="ghost" size="icon-sm" title={t('common.close')} onClick={onClose}>
           <X />
         </Button>
       </div>
 
       {loading ? (
-        <p className="py-8 text-center text-xs text-muted-foreground">读取当前 Cookie…</p>
+        <p className="py-8 text-center text-xs text-muted-foreground">{t('cookieSettings.loading')}</p>
       ) : (
         <>
           <div className="flex gap-1.5">
             <Button variant="outline" size="sm" className="flex-1"
               onClick={() => setSelected(new Set(cookies.filter(isLikelyAuth).map((c) => c.name)))}>
-              <Sparkles /> 智能推荐
+              <Sparkles /> {t('cookieSettings.smartRecommend')}
             </Button>
             <Button variant="outline" size="sm" className="flex-1"
               onClick={() => setSelected(new Set(cookies.map((c) => c.name)))}>
-              全选
+              {t('cookieSettings.selectAll')}
             </Button>
             <Button variant="outline" size="sm" className="flex-1" onClick={() => setSelected(new Set())}>
-              清空
+              {t('common.clear')}
             </Button>
           </div>
 
           <ul className="max-h-56 divide-y overflow-y-auto rounded-lg border">
             {cookies.length === 0 && (
               <li className="px-3 py-5 text-center text-xs text-muted-foreground">
-                当前作用域下没有 Cookie
+                {t('cookieSettings.empty')}
               </li>
             )}
             {cookies.map((c) => (
@@ -129,7 +131,7 @@ export default function CookieSettings({ domain, config, onSaved, onClose }) {
                   <button
                     className="ml-0.5 cursor-pointer opacity-60 hover:opacity-100"
                     onClick={() => setExtras((e) => e.filter((x) => x !== p))}
-                    title="移除"
+                    title={t('common.remove')}
                   >
                     <X className="size-3" />
                   </button>
@@ -147,17 +149,19 @@ export default function CookieSettings({ domain, config, onSaved, onClose }) {
           >
             <Input
               className="h-8 flex-1 font-mono text-xs"
-              placeholder="手动添加，支持前缀通配 如 __Secure-*"
+              placeholder={t('cookieSettings.addPlaceholder')}
               value={custom}
               onChange={(e) => setCustom(e.target.value)}
             />
             <Button type="submit" variant="outline" size="sm" disabled={!custom.trim()}>
-              <Plus /> 添加
+              <Plus /> {t('common.add')}
             </Button>
           </form>
 
           <Button className="w-full" onClick={save}>
-            保存设置（{total > 0 ? `${total} 项` : '未选择'}）
+            {t('cookieSettings.saveSettings', {
+              status: total > 0 ? t('common.selectedCount', { count: total }) : t('common.noneSelected'),
+            })}
           </Button>
         </>
       )}

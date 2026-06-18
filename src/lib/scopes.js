@@ -1,3 +1,5 @@
+import { appError } from './errors'
+
 // 作用域横跨 accounts 与 domainConfigs 两个存储，这里提供整体的列举 / 改名 / 删除。
 const A = 'accounts'
 const C = 'domainConfigs'
@@ -20,7 +22,7 @@ export async function listScopes() {
 export async function createScope(pattern, cookieNames = []) {
   const d = await chrome.storage.local.get([A, C])
   if (d[A]?.[pattern] || d[C]?.[pattern]) {
-    throw new Error(`作用域「${pattern}」已存在`)
+    throw appError('scopeExists', { pattern })
   }
   const configs = d[C] ?? {}
   configs[pattern] = { cookieNames }
@@ -36,11 +38,11 @@ export async function importPreset(jsonText) {
   try {
     parsed = JSON.parse(jsonText)
   } catch {
-    throw new Error('不是有效的 JSON 文件')
+    throw appError('jsonFileInvalid')
   }
   const list = parsed?.scopes
   if (!Array.isArray(list)) {
-    throw new Error('文件格式不正确，缺少 scopes 字段')
+    throw appError('scopesMissing')
   }
   const d = await chrome.storage.local.get([A, C])
   const accounts = d[A] ?? {}

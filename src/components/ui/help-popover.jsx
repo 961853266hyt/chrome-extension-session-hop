@@ -1,11 +1,14 @@
 import * as React from 'react'
 import { CircleHelp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 /** 点击问号图标弹出的轻量说明气泡，点击外部或再次点击关闭。 */
-export function HelpPopover({ children, className, label = '说明' }) {
+export function HelpPopover({ children, className, label }) {
+  const { t } = useI18n()
   const [open, setOpen] = React.useState(false)
   const ref = React.useRef(null)
+  const ariaLabel = label ?? t('dialog.help')
 
   React.useEffect(() => {
     if (!open) return
@@ -20,7 +23,7 @@ export function HelpPopover({ children, className, label = '说明' }) {
     <span ref={ref} className="relative inline-flex">
       <button
         type="button"
-        aria-label={label}
+        aria-label={ariaLabel}
         className="text-muted-foreground/70 transition-colors hover:text-foreground"
         onClick={() => setOpen((v) => !v)}
       >

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Plus, Download, Upload, Trash2, Pencil, Check, X, Globe, Cookie, FileJson, ClipboardPaste, ClipboardCopy } from 'lucide-react'
+import { Plus, Download, Upload, Trash2, Pencil, Check, X, Globe, Cookie, FileJson, ClipboardPaste, ClipboardCopy, Languages } from 'lucide-react'
 import { listScopes, createScope, renameScope, deleteScope, importPreset } from '../lib/scopes'
 import { setCookieNames, setLabel } from '../lib/domain-config'
 import { saveAccount, renameAccount, updateAccountCookies, deleteAccount, exportAccounts, importAccounts } from '../lib/storage'
@@ -19,6 +19,8 @@ import {
 import { Toast } from '@/components/toast'
 import { EditAccountDialog } from '@/components/edit-account-dialog'
 import { AddAccountDialog } from '@/components/add-account-dialog'
+import { useI18n } from '@/lib/i18n'
+import { appError, getErrorMessage } from '@/lib/errors'
 
 // 把逗号 / 空格 / 换行分隔的输入解析成 Cookie 名列表
 function parseNames(text) {
@@ -53,9 +55,9 @@ async function readClipboardText() {
   try {
     text = await navigator.clipboard.readText()
   } catch {
-    throw new Error('无法读取剪贴板，请检查浏览器权限')
+    throw appError('clipboardRead')
   }
-  if (!text.trim()) throw new Error('剪贴板是空的')
+  if (!text.trim()) throw appError('clipboardEmpty')
   return text
 }
 
@@ -65,7 +67,7 @@ function parseClipboardCookies(text, cookieNames) {
   try {
     parsed = JSON.parse(text)
   } catch {
-    throw new Error('剪贴板内容不是有效的 JSON')
+    throw appError('clipboardJsonInvalid')
   }
   let cookies
   let name = null
@@ -75,24 +77,25 @@ function parseClipboardCookies(text, cookieNames) {
     cookies = parsed.cookies
     if (typeof parsed.name === 'string' && parsed.name.trim()) name = parsed.name.trim()
   } else {
-    throw new Error('未识别到 Cookie 数据（应为 Cookie 数组或含 cookies 字段的对象）')
+    throw appError('clipboardCookieInvalid')
   }
   cookies = cookies.filter(
     (c) => c?.name && typeof c.value === 'string' && matchCookieName(c.name, cookieNames),
   )
-  if (cookies.length === 0) throw new Error('没有可用的 Cookie（检查格式或 Cookie 组）')
+  if (cookies.length === 0) throw appError('clipboardNoCookie')
   return { cookies, name }
 }
 
 function validatePattern(raw) {
   const p = raw.trim().toLowerCase()
-  if (!p) return { error: '请输入域名通配模式' }
-  if (/[\s/]|^https?:/.test(p)) return { error: '不要带协议或路径，例如 www-d.example.com' }
-  if (!p.includes('.')) return { error: '看起来不是有效域名' }
+  if (!p) return { error: 'scopePatternRequired' }
+  if (/[\s/]|^https?:/.test(p)) return { error: 'scopePatternNoProtocol' }
+  if (!p.includes('.')) return { error: 'scopePatternInvalid' }
   return { value: p }
 }
 
 export default function Options() {
+  const { t, language, setLanguage } = useI18n()
   const [scopes, setScopes] = useState([])
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState(null)
@@ -120,7 +123,7 @@ export default function Options() {
     try {
       await fn()
     } catch (e) {
-      notify('error', e?.message ?? '操作失败')
+      notify('error', getErrorMessage(e, t))
     } finally {
       setBusy(false)
     }
@@ -140,7 +143,7 @@ export default function Options() {
     try {
       await navigator.clipboard.writeText(text)
     } catch {
-      throw new Error('无法写入剪贴板，请检查浏览器权限')
+      throw appError('clipboardWrite')
     }
   }
 
@@ -150,16 +153,19 @@ export default function Options() {
     try {
       parsed = JSON.parse(text)
     } catch {
-      throw new Error('不是有效的 JSON')
+      throw appError('jsonInvalid')
     }
     if (Array.isArray(parsed?.scopes)) {
       const { created, skipped } = await importPreset(text)
       await reload()
-      notify('ok', `预设已导入：新建 ${created} 个作用域${skipped ? `，跳过 ${skipped} 个已存在` : ''}`)
+      notify('ok', t('options.importedPreset', {
+        created,
+        skipped: skipped ? t('options.skippedScopes', { count: skipped }) : '',
+      }))
     } else {
       const count = await importAccounts(text)
       await reload()
-      notify('ok', `成功导入 ${count} 个账号`)
+      notify('ok', t('options.importedAccounts', { count }))
     }
   }
 
@@ -176,56 +182,64 @@ export default function Options() {
       try {
         text = await navigator.clipboard.readText()
       } catch {
-        throw new Error('无法读取剪贴板，请检查浏览器权限')
+        throw appError('clipboardRead')
       }
-      if (!text.trim()) throw new Error('剪贴板是空的')
+      if (!text.trim()) throw appError('clipboardEmpty')
       await importText(text)
     })
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-10">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">设置</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('options.title')}</h1>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            disabled={busy}
+            title={t('common.language')}
+            onClick={() => setLanguage(language === 'zh-CN' ? 'en' : 'zh-CN')}
+          >
+            <Languages /> {language === 'zh-CN' ? 'English' : '中文'}
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" disabled={busy}>
-                <Upload /> 导出全部
+                <Upload /> {t('options.exportAll')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => run(async () => {
                 download(await exportAccounts(null), `accounts-all-${Date.now()}.json`)
-                notify('ok', '已导出全部')
+                notify('ok', t('options.exportedAll'))
               })}>
-                <FileJson /> 下载文件
+                <FileJson /> {t('common.downloadFile')}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => run(async () => {
                 await copyToClipboard(await exportAccounts(null))
-                notify('ok', '已复制到剪贴板')
+                notify('ok', t('common.copied'))
               })}>
-                <ClipboardCopy /> 复制到剪贴板
+                <ClipboardCopy /> {t('common.toClipboard')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" disabled={busy}>
-                <Download /> 导入
+                <Download /> {t('common.import')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
-                <FileJson /> 从文件
+                <FileJson /> {t('common.fromFile')}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onImportClipboard}>
-                <ClipboardPaste /> 从剪贴板
+                <ClipboardPaste /> {t('common.fromClipboard')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <input ref={fileInputRef} type="file" accept="application/json,.json" hidden onChange={onImportFile} />
           <Button disabled={busy} onClick={() => setNewOpen(true)}>
-            <Plus /> 新增作用域
+            <Plus /> {t('options.addScope')}
           </Button>
         </div>
       </header>
@@ -233,9 +247,9 @@ export default function Options() {
       {scopes.length === 0 ? (
         <Card className="border-0 shadow-md ring-1 ring-border/60">
           <CardContent className="py-14 text-center text-sm text-muted-foreground">
-            还没有任何作用域。点右上角「新增作用域」创建，
+            {t('options.emptyScopes')}
             <br />
-            或打开任意网站，在插件弹窗里登录后「保存当前账号」。
+            {t('options.emptyScopesSecond')}
           </CardContent>
         </Card>
       ) : (
@@ -265,7 +279,7 @@ export default function Options() {
             await createScope(pattern, names)
             await reload()
             setNewOpen(false)
-            notify('ok', `已创建作用域 ${pattern}`)
+            notify('ok', t('options.createdScope', { pattern }))
           })
         }
       />
@@ -283,7 +297,7 @@ export default function Options() {
             await updateAccountCookies(pattern, account.id, cookies)
             await reload()
             setEditTarget(null)
-            notify('ok', '已保存')
+            notify('ok', t('common.saved'))
           })
         }
       />
@@ -301,7 +315,7 @@ export default function Options() {
             await saveAccount(addTarget.pattern, name, cookies)
             await reload()
             setAddTarget(null)
-            notify('ok', `已添加账号「${name}」`)
+            notify('ok', t('options.addedAccount', { name }))
           })
         }
       />
@@ -312,6 +326,7 @@ export default function Options() {
 }
 
 function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, onAddAccount }) {
+  const { t } = useI18n()
   const [patternDraft, setPatternDraft] = useState(scope.pattern)
   const [cookieInput, setCookieInput] = useState('')
   const [editingLabel, setEditingLabel] = useState(false)
@@ -330,11 +345,11 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
   const savePattern = (e) => {
     e.preventDefault()
     const { value, error } = validatePattern(patternDraft)
-    if (error) return notify('error', error)
+    if (error) return notify('error', t(`error.${error}`))
     run(async () => {
       await renameScope(scope.pattern, value)
       await reload()
-      notify('ok', `作用域已改为 ${value}`)
+      notify('ok', t('options.scopeChanged', { pattern: value }))
     })
   }
 
@@ -359,10 +374,10 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
   const addFromClipboard = () =>
     run(async () => {
       const { cookies, name } = parseClipboardCookies(await readClipboardText(), scope.cookieNames)
-      const accName = name ?? '剪贴板账号'
+      const accName = name ?? t('options.clipboardAccountName')
       await saveAccount(scope.pattern, accName, cookies)
       await reload()
-      notify('ok', `已从剪贴板添加「${accName}」（${cookies.length} 个 Cookie）`)
+      notify('ok', t('options.addedFromClipboard', { name: accName, count: cookies.length }))
     })
 
   // 把单个账号复制到剪贴板（name + cookies）
@@ -376,9 +391,9 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
       try {
         await navigator.clipboard.writeText(json)
       } catch {
-        throw new Error('无法写入剪贴板，请检查浏览器权限')
+        throw appError('clipboardWrite')
       }
-      notify('ok', `已复制「${acc.name}」到剪贴板`)
+      notify('ok', t('options.copiedAccount', { name: acc.name }))
     })
 
   // 用剪贴板里的 Cookie 覆盖某个账号（保留其名字）
@@ -387,7 +402,7 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
       const { cookies } = parseClipboardCookies(await readClipboardText(), scope.cookieNames)
       await updateAccountCookies(scope.pattern, acc.id, cookies)
       await reload()
-      notify('ok', `已用剪贴板覆盖「${acc.name}」（${cookies.length} 个 Cookie）`)
+      notify('ok', t('options.overwrittenFromClipboard', { name: acc.name, count: cookies.length }))
     })
 
   return (
@@ -401,14 +416,14 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
               value={patternDraft}
               onChange={(e) => setPatternDraft(e.target.value)}
               disabled={busy}
-              aria-label="域名通配模式"
+              aria-label={t('options.patternLabel')}
             />
             {dirty && (
               <>
-                <Button type="submit" size="icon-sm" variant="outline" disabled={busy} title="保存通配">
+                <Button type="submit" size="icon-sm" variant="outline" disabled={busy} title={t('options.savePattern')}>
                   <Check />
                 </Button>
-                <Button type="button" size="icon-sm" variant="ghost" disabled={busy} title="还原"
+                <Button type="button" size="icon-sm" variant="ghost" disabled={busy} title={t('common.restore')}
                   onClick={() => setPatternDraft(scope.pattern)}>
                   <X />
                 </Button>
@@ -421,8 +436,8 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
               className="h-8 w-40 text-[13px]"
               value={labelDraft}
               maxLength={20}
-              placeholder="别名"
-              aria-label="作用域别名"
+              placeholder={t('options.aliasPlaceholder')}
+              aria-label={t('options.aliasLabel')}
               onChange={(e) => setLabelDraft(e.target.value)}
               onBlur={saveLabel}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
@@ -431,7 +446,7 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
             <button
               type="button"
               disabled={busy}
-              title={scope.label ? '点击编辑别名' : '点击添加别名'}
+              title={scope.label ? t('options.editAlias') : t('options.addAlias')}
               onClick={() => { setLabelDraft(scope.label); setEditingLabel(true) }}
               className={
                 scope.label
@@ -439,7 +454,7 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
                   : 'inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90'
               }
             >
-              {scope.label ? scope.label : (<><Plus className="size-3" /> 别名</>)}
+              {scope.label ? scope.label : (<><Plus className="size-3" /> {t('options.alias')}</>)}
             </button>
           )}
         </div>
@@ -447,20 +462,20 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
           <Button size="sm" disabled={busy || scope.accounts.length === 0}
             onClick={() => run(async () => {
               download(await exportAccounts(scope.pattern), `accounts-${scope.pattern}-${Date.now()}.json`)
-              notify('ok', '已导出')
+              notify('ok', t('options.exported'))
             })}>
-            <Upload /> 导出
+            <Upload /> {t('common.export')}
           </Button>
           <Button variant="destructive" size="sm" disabled={busy}
             onClick={() => {
-              if (!confirm(`删除作用域「${scope.pattern}」及其下全部账号？此操作不可撤销。`)) return
+              if (!confirm(t('options.confirmDeleteScope', { pattern: scope.pattern }))) return
               run(async () => {
                 await deleteScope(scope.pattern)
                 await reload()
-                notify('ok', '已删除作用域')
+                notify('ok', t('options.scopeDeleted'))
               })
             }}>
-            <Trash2 /> 删除
+            <Trash2 /> {t('common.delete')}
           </Button>
         </div>
       </CardHeader>
@@ -469,12 +484,12 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
         <section>
           <div className="mb-2 flex items-center gap-2">
             <Cookie className="size-4 text-muted-foreground" />
-            <Label className="text-xs text-muted-foreground">Cookie 组</Label>
-            <HelpPopover label="Cookie 名规则">
-              填写要管理的 Cookie 名，多个用 <code className="font-mono">,</code> 分隔；支持 <code className="font-mono">前缀*</code> 通配，如 <code className="font-mono">__Secure-*</code>。留空表示不管理任何 Cookie。
+            <Label className="text-xs text-muted-foreground">{t('options.cookieGroup')}</Label>
+            <HelpPopover label={t('options.cookieNameRules')}>
+              {t('options.cookieHelpPrefix')} <code className="font-mono">,</code> {t('options.cookieHelpMiddle')} <code className="font-mono">prefix*</code> {t('options.cookieHelpSuffix')} <code className="font-mono">__Secure-*</code>{t('options.cookieHelpEnd')}
             </HelpPopover>
             {scope.cookieNames.length === 0 && (
-              <Badge variant="destructive">未选择 Cookie</Badge>
+              <Badge variant="destructive">{t('options.noCookieSelected')}</Badge>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -485,7 +500,7 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
                   className="ml-0.5 cursor-pointer opacity-60 hover:opacity-100"
                   onClick={() => removeCookieName(name)}
                   disabled={busy}
-                  title="移除"
+                  title={t('common.remove')}
                 >
                   <X className="size-3" />
                 </button>
@@ -499,7 +514,7 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
                 disabled={busy}
               />
               <Button type="submit" size="sm" disabled={busy || !cookieInput.trim()}>
-                <Plus /> 添加
+                <Plus /> {t('common.add')}
               </Button>
             </form>
           </div>
@@ -508,20 +523,20 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
         <section>
           <div className="mb-2 flex items-center justify-between">
             <Label className="text-xs text-muted-foreground">
-              Profile（{scope.accounts.length}）
+              {t('options.profiles', { count: scope.accounts.length })}
             </Label>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={busy} onClick={addFromClipboard}>
-                <ClipboardPaste /> 从剪贴板
+                <ClipboardPaste /> {t('common.fromClipboard')}
               </Button>
               <Button variant="outline" size="sm" disabled={busy} onClick={onAddAccount}>
-                <Plus /> 添加账号
+                <Plus /> {t('options.addAccount')}
               </Button>
             </div>
           </div>
           {scope.accounts.length === 0 ? (
             <p className="rounded-xl bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
-              该作用域下还没有账号——在匹配的网站上打开插件弹窗「保存当前账号」，或点右上角「添加账号」手动录入
+              {t('options.emptyAccounts')}
             </p>
           ) : (
             <div className="space-y-2.5">
@@ -543,27 +558,27 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
                     <p className="truncate font-medium">{acc.name}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <Button variant="ghost" size="icon-sm" disabled={busy} title="复制到剪贴板"
+                    <Button variant="ghost" size="icon-sm" disabled={busy} title={t('common.toClipboard')}
                       onClick={(e) => { e.stopPropagation(); copyAccount(acc) }}>
                       <ClipboardCopy />
                     </Button>
-                    <Button variant="ghost" size="icon-sm" disabled={busy} title="从剪贴板覆盖"
+                    <Button variant="ghost" size="icon-sm" disabled={busy} title={t('options.overwriteFromClipboard')}
                       onClick={(e) => { e.stopPropagation(); overwriteFromClipboard(acc) }}>
                       <ClipboardPaste />
                     </Button>
-                    <Button variant="ghost" size="icon-sm" disabled={busy} title="编辑"
+                    <Button variant="ghost" size="icon-sm" disabled={busy} title={t('common.edit')}
                       onClick={(e) => { e.stopPropagation(); onEditAccount(acc) }}>
                       <Pencil />
                     </Button>
-                    <Button variant="ghost" size="icon-sm" disabled={busy} title="删除"
+                    <Button variant="ghost" size="icon-sm" disabled={busy} title={t('common.delete')}
                       className="text-destructive hover:text-destructive"
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (!confirm(`删除账号「${acc.name}」？`)) return
+                        if (!confirm(t('popup.confirmDeleteAccount', { name: acc.name }))) return
                         run(async () => {
                           await deleteAccount(scope.pattern, acc.id)
                           await reload()
-                          notify('ok', '已删除账号')
+                          notify('ok', t('options.accountDeleted'))
                         })
                       }}>
                       <Trash2 />
@@ -580,6 +595,7 @@ function ScopeCard({ scope, busy, run, reload, notify, download, onEditAccount, 
 }
 
 function NewScopeDialog({ open, onOpenChange, busy, onSubmit }) {
+  const { t } = useI18n()
   const [pattern, setPattern] = useState('')
   const [names, setNames] = useState('')
   const [error, setError] = useState('')
@@ -604,38 +620,38 @@ function NewScopeDialog({ open, onOpenChange, busy, onSubmit }) {
       <DialogContent>
         <form onSubmit={submit} className="grid gap-4">
           <DialogHeader>
-            <DialogTitle>新增作用域</DialogTitle>
+            <DialogTitle>{t('options.newScopeTitle')}</DialogTitle>
             <DialogDescription>
-              域名通配决定账号分组和 Cookie 抓取范围；Cookie 组限定只管理哪些 Cookie。
+              {t('options.newScopeDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
-            <Label htmlFor="ns-pattern">域名通配模式</Label>
+            <Label htmlFor="ns-pattern">{t('options.patternLabel')}</Label>
             <Input
               id="ns-pattern"
               className="font-mono"
-              placeholder="如 www-d.example.com 或 *.example.com"
+              placeholder={t('options.patternPlaceholder')}
               value={pattern}
               onChange={(e) => { setPattern(e.target.value); setError('') }}
               autoFocus
             />
-            {error && <p className="text-xs text-destructive">{error}</p>}
+            {error && <p className="text-xs text-destructive">{t(`error.${error}`)}</p>}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="ns-names">Cookie 组（可选）</Label>
+            <Label htmlFor="ns-names">{t('options.cookieGroupOptional')}</Label>
             <Input
               id="ns-names"
               className="font-mono"
-              placeholder="如 sessionid, __Secure-*（逗号分隔，留空 = 全部）"
+              placeholder={t('options.cookieGroupPlaceholder')}
               value={names}
               onChange={(e) => setNames(e.target.value)}
             />
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">取消</Button>
+              <Button type="button" variant="outline">{t('common.cancel')}</Button>
             </DialogClose>
-            <Button type="submit" disabled={busy}>创建</Button>
+            <Button type="submit" disabled={busy}>{t('common.create')}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useI18n } from '@/lib/i18n'
 import {
   Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose,
 } from '@/components/ui/dialog'
@@ -12,6 +13,7 @@ import {
  * onSubmit(name, pairs)，pairs = [{ name, value }]。
  */
 export function AddAccountDialog({ open, onOpenChange, scope, cookieNames, busy, onSubmit }) {
+  const { t } = useI18n()
   const [name, setName] = useState('')
   const [values, setValues] = useState({})
 
@@ -36,20 +38,20 @@ export function AddAccountDialog({ open, onOpenChange, scope, cookieNames, busy,
       <DialogContent className="max-w-lg">
         <form onSubmit={submit} className="grid gap-4">
           <DialogHeader>
-            <DialogTitle>添加账号</DialogTitle>
+            <DialogTitle>{t('dialog.addAccountTitle')}</DialogTitle>
             <DialogDescription className="font-mono text-xs">{scope}</DialogDescription>
           </DialogHeader>
 
           {noCookieGroup ? (
             <p className="rounded-xl bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
-              请先在上方设置「Cookie 组」，再手动添加账号——
+              {t('dialog.noCookieGroup')}
               <br />
-              账号的 Cookie 名取自 Cookie 组。
+              {t('dialog.noCookieGroupSecond')}
             </p>
           ) : (
             <>
               <div className="grid gap-2">
-                <Label htmlFor="add-account-name">备注名</Label>
+                <Label htmlFor="add-account-name">{t('dialog.nameLabel')}</Label>
                 <Input
                   id="add-account-name"
                   value={name}
@@ -60,7 +62,7 @@ export function AddAccountDialog({ open, onOpenChange, scope, cookieNames, busy,
               </div>
 
               <div className="grid gap-2">
-                <Label className="text-xs text-muted-foreground">Cookie 值</Label>
+                <Label className="text-xs text-muted-foreground">{t('dialog.cookieValues')}</Label>
                 <div className="-mr-1 max-h-[50vh] space-y-3 overflow-y-auto pr-1">
                   {cookieNames.map((n) => (
                     <div key={n} className="grid gap-1.5">
@@ -81,9 +83,9 @@ export function AddAccountDialog({ open, onOpenChange, scope, cookieNames, busy,
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">取消</Button>
+              <Button type="button" variant="outline">{t('common.cancel')}</Button>
             </DialogClose>
-            <Button type="submit" disabled={busy || noCookieGroup || !name.trim()}>添加</Button>
+            <Button type="submit" disabled={busy || noCookieGroup || !name.trim()}>{t('common.add')}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

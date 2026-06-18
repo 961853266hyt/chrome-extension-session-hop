@@ -13,12 +13,15 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Toast } from '@/components/toast'
 import { NameDialog } from '@/components/name-dialog'
+import { useI18n } from '@/lib/i18n'
+import { getErrorMessage } from '@/lib/errors'
 import CookieSettings from './CookieSettings'
 import AccountSidebar from './AccountSidebar'
 
 const COLLAPSE_KEY = 'popupSidebarCollapsed'
 
 export default function App() {
+  const { t } = useI18n()
   const [tab, setTab] = useState(null)
   const [host, setHost] = useState(null)
   const [root, setRoot] = useState(null)
@@ -74,7 +77,7 @@ export default function App() {
     try {
       await fn()
     } catch (e) {
-      notify('error', e?.message ?? '操作失败')
+      notify('error', getErrorMessage(e, t))
     } finally {
       setBusy(false)
     }
@@ -100,19 +103,19 @@ export default function App() {
     run(async () => {
       const name = newName.trim()
       if (!name) {
-        notify('error', '请先输入备注名')
+        notify('error', t('popup.enterNameFirst'))
         return
       }
       const cookies = await getDomainCookies(scope, patterns)
       if (cookies.length === 0) {
-        notify('error', patterns?.length ? '没匹配到受管理的 Cookie，请检查 Cookie 组或是否已登录' : '请先选择要保存的 Cookie 名称')
+        notify('error', patterns?.length ? t('popup.noManagedCookie') : t('popup.selectCookieFirst'))
         return
       }
       await saveAccount(scope, name, cookies)
       setNewName('')
       if (!matching.includes(scope)) setMatching((m) => [...m, scope].sort())
       await loadScope(scope)
-      notify('ok', `已保存「${name}」（${cookies.length} 条 Cookie）`)
+      notify('ok', t('popup.savedAccount', { name, count: cookies.length }))
     })
 
   const handleSwitch = (acc) =>
@@ -120,46 +123,48 @@ export default function App() {
       const failed = await applyAccount(scope, acc.cookies, patterns)
       await loadScope(scope)
       if (tab?.id) await chrome.tabs.reload(tab.id)
-      notify('ok', failed > 0 ? `已切换，${failed} 条 Cookie 写入失败` : `已切换到「${acc.name}」`)
+      notify('ok', failed > 0
+        ? t('popup.switchedWithFailures', { count: failed })
+        : t('popup.switchedTo', { name: acc.name }))
     })
 
   const handleUpdate = (acc) =>
     run(async () => {
       const cookies = await getDomainCookies(scope, patterns)
       if (cookies.length === 0) {
-        notify('error', patterns?.length ? '当前没有可保存的 Cookie' : '请先选择要保存的 Cookie 名称')
+        notify('error', patterns?.length ? t('popup.noCurrentCookie') : t('popup.selectCookieFirst'))
         return
       }
       await updateAccountCookies(scope, acc.id, cookies)
       await loadScope(scope)
-      notify('ok', `已把浏览器当前 Cookie 同步到「${acc.name}」`)
+      notify('ok', t('popup.syncedCurrentCookie', { name: acc.name }))
     })
 
   const handleLogout = () =>
     run(async () => {
       const cookies = await getDomainCookies(scope, patterns)
       if (cookies.length === 0) {
-        notify('error', '当前没有受管理的 Cookie，可能已是未登录状态')
+        notify('error', t('popup.noLogoutCookie'))
         return
       }
       // 当前登录态没对应任何已存账号时，清掉就找不回来了，先确认
       if (
         activeId === null &&
-        !confirm('当前登录态尚未保存为账号，退出后将无法找回。确定退出登录？')
+        !confirm(t('popup.confirmLogoutUnsaved'))
       )
         return
       await removeCookies(cookies)
       await loadScope(scope)
       if (tab?.id) await chrome.tabs.reload(tab.id)
-      notify('ok', `已退出登录（清除 ${cookies.length} 条 Cookie）`)
+      notify('ok', t('popup.loggedOut', { count: cookies.length }))
     })
 
   const handleDelete = (acc) => {
-    if (!confirm(`删除账号「${acc.name}」？`)) return
+    if (!confirm(t('popup.confirmDeleteAccount', { name: acc.name }))) return
     run(async () => {
       await deleteAccount(scope, acc.id)
       await loadScope(scope)
-      notify('ok', '已删除')
+      notify('ok', t('popup.deleted'))
     })
   }
 
@@ -174,8 +179,8 @@ export default function App() {
   if (host === null) {
     return (
       <div className="flex min-h-44 flex-col items-center justify-center gap-1 bg-background p-6 text-foreground">
-        <p className="text-sm font-medium">当前页面不支持</p>
-        <p className="text-xs text-muted-foreground">仅支持 http / https 网页</p>
+        <p className="text-sm font-medium">{t('popup.unsupportedTitle')}</p>
+        <p className="text-xs text-muted-foreground">{t('popup.unsupportedDesc')}</p>
       </div>
     )
   }
@@ -202,7 +207,7 @@ export default function App() {
         <header className="border-b px-4 pb-3 pt-3.5">
           <div className="mb-2.5 flex items-center justify-between">
             <h1 className="text-sm font-semibold tracking-tight">SessionHop</h1>
-            <Button variant="ghost" size="icon-sm" title="打开管理页" onClick={openOptions}>
+            <Button variant="ghost" size="icon-sm" title={t('popup.openOptions')} onClick={openOptions}>
               <Settings />
             </Button>
           </div>
@@ -211,19 +216,19 @@ export default function App() {
             <SiteIcon tab={tab} host={host} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium leading-tight" title={host}>{host}</p>
-              <p className="truncate font-mono text-[11px] text-muted-foreground" title={`作用域 ${scope}`}>
+              <p className="truncate font-mono text-[11px] text-muted-foreground" title={t('popup.scopeTitle', { scope })}>
                 {scope}
               </p>
             </div>
             {patterns?.length ? (
-              <Badge variant="secondary" className="shrink-0 cursor-pointer" title={`管理 ${patterns.length} 个 Cookie：${patterns.join(', ')}，点击编辑`}
+              <Badge variant="secondary" className="shrink-0 cursor-pointer" title={t('popup.managedCookieTitle', { count: patterns.length, names: patterns.join(', ') })}
                 onClick={() => setView(view === 'cookies' ? 'list' : 'cookies')}>
-                {patterns.length} 个 Cookie
+                {t('popup.managedCookieBadge', { count: patterns.length })}
               </Badge>
             ) : (
-              <Badge variant="destructive" className="shrink-0 cursor-pointer" title="未选择 Cookie 名称，不会默认保存全部 Cookie。点击选择"
+              <Badge variant="destructive" className="shrink-0 cursor-pointer" title={t('popup.noCookieTitle')}
                 onClick={() => setView(view === 'cookies' ? 'list' : 'cookies')}>
-                未选择 Cookie
+                {t('popup.noCookieBadge')}
               </Badge>
             )}
           </div>
@@ -259,15 +264,17 @@ export default function App() {
                 if (!matching.includes(scope)) setMatching((m) => [...m, scope].sort())
                 setView('list')
                 loadScope(scope)
-                notify('ok', names.length ? `已设置管理 ${names.length} 个 Cookie` : '未选择 Cookie，不会保存或清除任何 Cookie')
+                notify('ok', names.length
+                  ? t('popup.savedCookieSettings', { count: names.length })
+                  : t('popup.savedNoCookieSettings'))
               }}
             />
           ) : accounts.length === 0 ? (
             <div className="flex h-full min-h-36 flex-col items-center justify-center gap-1.5 text-center">
               <Globe className="mb-1 size-5 text-muted-foreground/60" />
-              <p className="text-[13px] font-medium">还没有保存账号</p>
+              <p className="text-[13px] font-medium">{t('popup.noAccountsTitle')}</p>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                先在网页上登录，再在下方输入备注名保存
+                {t('popup.noAccountsDesc')}
               </p>
             </div>
           ) : (
@@ -277,22 +284,22 @@ export default function App() {
                   <span className="mx-auto mb-2 flex size-11 items-center justify-center rounded-lg bg-primary text-base font-semibold text-primary-foreground">
                     {activeAccount.name.slice(0, 2).toUpperCase()}
                   </span>
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">当前登录</p>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('popup.currentLogin')}</p>
                   <p className="mt-0.5 text-sm font-semibold">{activeAccount.name}</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {activeAccount.cookies.length} 条 Cookie
+                    {t('common.cookieCount', { count: activeAccount.cookies.length })}
                   </p>
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed p-4">
-                  <p className="text-[13px] font-medium">未识别当前登录账号</p>
+                  <p className="text-[13px] font-medium">{t('popup.unknownAccountTitle')}</p>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    点左侧账号即可一键切换
+                    {t('popup.unknownAccountDesc')}
                   </p>
                 </div>
               )}
               <p className="text-[11px] text-muted-foreground">
-                {collapsed ? '展开左栏查看备注 · ' : ''}从左侧选择账号快速切换
+                {collapsed ? t('popup.expandHint') : ''}{t('popup.switchHint')}
               </p>
             </div>
           )}
@@ -309,14 +316,14 @@ export default function App() {
             >
               <Input
                 className="h-9 flex-1"
-                placeholder="输入账号备注"
+                placeholder={t('popup.namePlaceholder')}
                 value={newName}
                 maxLength={30}
                 onChange={(e) => setNewName(e.target.value)}
                 disabled={busy}
               />
               <Button type="submit" disabled={busy || !newName.trim()}>
-                保存
+                {t('common.save')}
               </Button>
             </form>
           </div>
@@ -326,8 +333,8 @@ export default function App() {
       <NameDialog
         open={!!renameTarget}
         onOpenChange={(open) => !open && setRenameTarget(null)}
-        title="重命名账号"
-        description={renameTarget ? `${scope} 下的「${renameTarget.name}」` : ''}
+        title={t('popup.renameTitle')}
+        description={renameTarget ? t('popup.renameDescription', { scope, name: renameTarget.name }) : ''}
         initialName={renameTarget?.name ?? ''}
         busy={busy}
         onSubmit={(name) =>
@@ -335,7 +342,7 @@ export default function App() {
             await renameAccount(scope, renameTarget.id, name)
             setRenameTarget(null)
             await loadScope(scope)
-            notify('ok', '已改名')
+            notify('ok', t('popup.renamed'))
           })
         }
       />

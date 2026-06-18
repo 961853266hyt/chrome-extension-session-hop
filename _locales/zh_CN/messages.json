@@ -1,0 +1,8 @@
+{
+  "appName": {
+    "message": "SessionHop - 一键账号切换"
+  },
+  "appDescription": {
+    "message": "全站点多账号一键切换，基于 Cookie 保存与恢复"
+  }
+}
